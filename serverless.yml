@@ -1,0 +1,78 @@
+org: slavkososic
+app: blogapp
+service: Bloginfo
+frameworkVersion: '3'
+
+custom:
+  bucketName: blogpalikacijabiografijakorisnika
+  s3Sync:
+    - bucketName: ${self:custom.bucketName}
+      localDir: UploadData
+  usersTable: 'users'
+  blogsTable: 'blogs'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-central-1
+  stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - s3:*
+          Resource: '*'
+            
+  environment:
+    USERS_TABLE: ${self:custom.usersTable}
+    BLOGS_TABLE: ${self:custom.blogsTable}
+    bucketName: ${self:custom.bucketName}
+
+functions:
+  api:
+    handler: index.handler  
+    events:
+      - http: ANY /
+      - http: ANY /{proxy+}
+
+
+resources:
+  Resources:
+    BucketUpload:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketName: blogpalikacijabiografijakorisnika
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.usersTable}
+    BlogsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.blogsTable}
+
+plugins:
+  - serverless-s3-sync
+  - serverless-offline
+  
